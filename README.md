@@ -1,33 +1,49 @@
-Tối ưu hóa Siêu tham số cho Mạng Nơ-ron Tích chập (CNN) trên CIFAR-10 ứng dụng OptunaSinh viên thực hiện: Nguyễn Trần Hạo NhiênHọc phần: Nhập môn Tối ưu hóa — Khoa Công nghệ Thông tin, Trường Đại học Văn LangKho lưu trữ: https://github.com/Nhien676/optimization-cnn-hpo-1. Đặt vấn đềHiệu năng hội tụ của Mạng Nơ-ron Tích chập (CNN) phụ thuộc chặt chẽ vào bộ siêu tham số (hyperparameters) được thiết lập trước khi huấn luyện. Việc tinh chỉnh thủ công thường tốn nhiều thời gian, thiếu tính hệ thống và dễ rơi vào các điểm tối ưu cục bộ. Đồ án này tự động hóa quy trình tìm kiếm cấu hình siêu tham số tối ưu cho kiến trúc SimpleCNN trên bài toán phân loại ảnh bộ dữ liệu chuẩn CIFAR-10.2. Mô hình hóa bài toán tối ưuBài toán được phát biểu dưới dạng tối ưu hóa hộp đen (Black-box Optimization): $\max_{x \in \Omega} f(x)$.Vector biến quyết định ($x$):lr (Tốc độ học): biến thực liên tục thuộc đoạn $[10^{-5}, 10^{-2}]$, lấy mẫu theo phân phối log-uniform.batch_size (Kích thước lô): biến rời rạc thuộc tập $\{16, 32, 64\}$.optimizer (Thuật toán tối ưu): biến phân loại thuộc tập $\{\text{Adam}, \text{RMSprop}, \text{SGD}\}$ (với SGD cố định momentum = 0.9).dropout_rate (Tỷ lệ điều chuẩn Dropout): biến thực liên tục thuộc đoạn $[0.1, 0.7]$, lấy mẫu theo phân phối uniform.Hàm mục tiêu ($f(x)$): Cực đại hóa độ chính xác trên tập kiểm định (Validation Accuracy) sau 10 epochs huấn luyện.Ràng buộc & Ngân sách thực nghiệm: Giới hạn 30 lượt thử nghiệm (trials) $\times$ 10 epochs/lượt. Tập huấn luyện gốc 50.000 ảnh được chia theo tỷ lệ 80:20 (40.000 ảnh Train / 10.000 ảnh Validation); 10.000 ảnh Test được giữ độc lập hoàn toàn.3. Phương pháp và Thiết kế thực nghiệmBộ dữ liệu: CIFAR-10 Public Benchmark (Alex Krizhevsky, 2009) gồm 60.000 ảnh màu RGB kích thước $32 \times 32$ thuộc 10 lớp đối tượng, chuẩn hóa pixel về miền $[-1, 1]$.Cấu hình mốc tham chiếu (Baseline): lr = 0.001, batch_size = 32, optimizer = Adam, dropout_rate = 0.5.Thuật toán tối ưu hóa: Tree-structured Parzen Estimator (TPE) thông qua thư viện Optuna (seed = 42 cố định tính tái lập trên Python 3.11 và PyTorch).4. Kết quả thực nghiệm & Phân tíchCấu hình mô hìnhValidation AccTest Acc (Độc lập)Generalization Gap (Test − Val)Bộ siêu tham số chi tiếtBaseline (Mặc định)68,48%69,26%+0,78%lr=0.001, batch=32, Adam, dropout=0.5Best Trial (#23 — Optuna TPE)70,37%57,38%-12,99%lr=0.002025, batch=16, SGD, dropout=0.2531Mức chênh lệch (TPE − Base)+1,89%-11,88%—Đánh giá qua 30 trials (10 epochs/trial)Phân tích tổng quát hóa: Qua 30 trials, độ chính xác trên tập Validation dao động từ 34,03% (thấp nhất) đến 70,37% (cao nhất tại Trial #23), với giá trị trung vị đạt 66,45%. Mặc dù Trial #23 cải thiện +1,89% trên tập Validation, kết quả kiểm thử độc lập cho thấy hiện tượng quá khớp vào tập kiểm định (validation overfitting, mức chênh lệch -12,99%) do tỷ lệ dropout bị giảm xuống 0.2531 trên một hạt giống ngẫu nhiên duy nhất (seed = 42). Vì vậy, cấu hình Baseline được chọn làm mô hình triển khai an toàn trên thực tế.Độ nhạy siêu tham số (fANOVA): Tốc độ học (lr) là nhân tố chi phối lớn nhất (79%), theo sau là dropout_rate (21%), trong khi optimizer và batch_size tác động trực tiếp dưới 1%.Tệp minh chứng: Toàn bộ lịch sử chạy và 2 biểu đồ (optimization_history.png, param_importances.png) được lưu tại notebooks/results/ và notebooks/figures/.5. Cấu trúc thư mục và Hướng dẫn chạy lạioptimization-cnn-hpo-/
-├── notebooks/
-│   ├── cnn_hpo.ipynb                      # Mã nguồn huấn luyện, Optuna TPE & kiểm thử độc lập
-│   ├── results/
-│   │   └── optuna_trials_history.csv      # Nhật ký chi tiết 30 trials
-│   └── figures/
-│       ├── optimization_history.png       # Biểu đồ lịch sử hội tụ
-│       └── param_importances.png          # Biểu đồ tầm quan trọng siêu tham số (fANOVA)
-├── requirements.txt                       # Danh sách thư viện môi trường
-└── README.md                              # Tài liệu mô tả dự án
-Để tái lập kết quả thực nghiệm:git clone https://github.com/Nhien676/optimization-cnn-hpo-.git
-cd optimization-cnn-hpo-
-pip install -r requirements.txt
-jupyter notebook notebooks/cnn_hpo.ipynb
-Tối ưu hóa Siêu tham số cho Mạng Nơ-ron Tích chập (CNN) trên CIFAR-10 ứng dụng OptunaSinh viên thực hiện: Nguyễn Trần Hạo NhiênHọc phần: Nhập môn Tối ưu hóa — Khoa Công nghệ Thông tin, Trường Đại học Văn LangKho lưu trữ: https://github.com/Nhien676/optimization-cnn-hpo-1. Đặt vấn đềHiệu năng hội tụ của Mạng Nơ-ron Tích chập (CNN) phụ thuộc chặt chẽ vào bộ siêu tham số (hyperparameters) được thiết lập trước khi huấn luyện. Việc tinh chỉnh thủ công thường tốn nhiều thời gian, thiếu tính hệ thống và dễ rơi vào các điểm tối ưu cục bộ. Đồ án này tự động hóa quy trình tìm kiếm cấu hình siêu tham số tối ưu cho kiến trúc SimpleCNN trên bài toán phân loại ảnh bộ dữ liệu chuẩn CIFAR-10.2. Mô hình hóa bài toán tối ưuBài toán được phát biểu dưới dạng tối ưu hóa hộp đen (Black-box Optimization): $\max_{x \in \Omega} f(x)$.Vector biến quyết định ($x$):lr (Tốc độ học): biến thực liên tục thuộc đoạn $[10^{-5}, 10^{-2}]$, lấy mẫu theo phân phối log-uniform.batch_size (Kích thước lô): biến rời rạc thuộc tập $\{16, 32, 64\}$.optimizer (Thuật toán tối ưu): biến phân loại thuộc tập $\{\text{Adam}, \text{RMSprop}, \text{SGD}\}$ (với SGD cố định momentum = 0.9).dropout_rate (Tỷ lệ điều chuẩn Dropout): biến thực liên tục thuộc đoạn $[0.1, 0.7]$, lấy mẫu theo phân phối uniform.Hàm mục tiêu ($f(x)$): Cực đại hóa độ chính xác trên tập kiểm định (Validation Accuracy) sau 10 epochs huấn luyện.Ràng buộc & Ngân sách thực nghiệm: Giới hạn 30 lượt thử nghiệm (trials) $\times$ 10 epochs/lượt. Tập huấn luyện gốc 50.000 ảnh được chia theo tỷ lệ 80:20 (40.000 ảnh Train / 10.000 ảnh Validation); 10.000 ảnh Test được giữ độc lập hoàn toàn.3. Phương pháp và Thiết kế thực nghiệmBộ dữ liệu: CIFAR-10 Public Benchmark (Alex Krizhevsky, 2009) gồm 60.000 ảnh màu RGB kích thước $32 \times 32$ thuộc 10 lớp đối tượng, chuẩn hóa pixel về miền $[-1, 1]$.Cấu hình mốc tham chiếu (Baseline): lr = 0.001, batch_size = 32, optimizer = Adam, dropout_rate = 0.5.Thuật toán tối ưu hóa: Tree-structured Parzen Estimator (TPE) thông qua thư viện Optuna (seed = 42 cố định tính tái lập trên Python 3.11 và PyTorch).4. Kết quả thực nghiệm & Phân tíchCấu hình mô hìnhValidation AccTest Acc (Độc lập)Generalization Gap (Test − Val)Bộ siêu tham số chi tiếtBaseline (Mặc định)68,48%69,26%+0,78%lr=0.001, batch=32, Adam, dropout=0.5Best Trial (#23 — Optuna TPE)70,37%57,38%-12,99%lr=0.002025, batch=16, SGD, dropout=0.2531Mức chênh lệch (TPE − Base)+1,89%-11,88%—Đánh giá qua 30 trials (10 epochs/trial)Phân tích tổng quát hóa: Qua 30 trials, độ chính xác trên tập Validation dao động từ 34,03% (thấp nhất) đến 70,37% (cao nhất tại Trial #23), với giá trị trung vị đạt 66,45%. Mặc dù Trial #23 cải thiện +1,89% trên tập Validation, kết quả kiểm thử độc lập cho thấy hiện tượng quá khớp vào tập kiểm định (validation overfitting, mức chênh lệch -12,99%) do tỷ lệ dropout bị giảm xuống 0.2531 trên một hạt giống ngẫu nhiên duy nhất (seed = 42). Vì vậy, cấu hình Baseline được chọn làm mô hình triển khai an toàn trên thực tế.Độ nhạy siêu tham số (fANOVA): Tốc độ học (lr) là nhân tố chi phối lớn nhất (79%), theo sau là dropout_rate (21%), trong khi optimizer và batch_size tác động trực tiếp dưới 1%.Tệp minh chứng: Toàn bộ lịch sử chạy và 2 biểu đồ (optimization_history.png, param_importances.png) được lưu tại notebooks/results/ và notebooks/figures/.5. Cấu trúc thư mục và Hướng dẫn chạy lạioptimization-cnn-hpo-/
-├── notebooks/
-│   ├── cnn_hpo.ipynb                      # Mã nguồn huấn luyện, Optuna TPE & kiểm thử độc lập
-│   ├── results/
-│   │   └── optuna_trials_history.csv      # Nhật ký chi tiết 30 trials
-│   └── figures/
-│       ├── optimization_history.png       # Biểu đồ lịch sử hội tụ
-│       └── param_importances.png          # Biểu đồ tầm quan trọng siêu tham số (fANOVA)
-├── requirements.txt                       # Danh sách thư viện môi trường
-└── README.md                              # Tài liệu mô tả dự án
-Để tái lập kết quả thực nghiệm:git clone https://github.com/Nhien676/optimization-cnn-hpo-.git
-cd optimization-cnn-hpo-
-pip install -r requirements.txt
-jupyter notebook notebooks/cnn_hpo.ipynb
-6. Hạn chế và Hướng phát triển
+# Tối ưu hóa Siêu tham số cho Mạng Nơ-ron Tích chập (CNN) trên CIFAR-10 ứng dụng Optuna
 
-Thực nghiệm hiện tại mới đánh giá trên một phân hoạch cố định và một hạt giống ngẫu nhiên (seed = 42).
+* **Sinh viên thực hiện:** Nguyễn Trần Hạo Nhiên
+* **Học phần:** Nhập môn Tối ưu hóa — Khoa Công nghệ Thông tin, Trường Đại học Văn Lang
+* **Kho lưu trữ:** https://github.com/Nhien676/optimization-cnn-hpo-
 
-Trong giai đoạn tiếp theo, cần bổ sung ràng buộc cận dưới cho tỷ lệ điều chuẩn (dropout_rate >= 0.4), áp dụng tăng cường dữ liệu (Data Augmentation) và đánh giá đa hạt giống (mean ± std).
+---
+
+## 1. Đặt vấn đề
+
+Hiệu năng hội tụ của Mạng Nơ-ron Tích chập (CNN) phụ thuộc chặt chẽ vào bộ siêu tham số (*hyperparameters*) được thiết lập trước khi huấn luyện. Việc tinh chỉnh thủ công thường tốn nhiều thời gian, thiếu tính hệ thống và dễ rơi vào các điểm tối ưu cục bộ. Đồ án này tự động hóa quy trình tìm kiếm cấu hình siêu tham số tối ưu cho kiến trúc **SimpleCNN** trên bài toán phân loại ảnh bộ dữ liệu chuẩn **CIFAR-10**.
+
+---
+
+## 2. Mô hình hóa bài toán tối ưu
+
+Bài toán được phát biểu dưới dạng tối ưu hóa hộp đen (*Black-box Optimization*):
+
+$$\max_{x \in \Omega} f(x)$$
+
+* **Vector biến quyết định ($x$):**
+  * `lr` (Tốc độ học): biến thực liên tục thuộc đoạn $[10^{-5}, 10^{-2}]$, lấy mẫu theo phân phối log-uniform.
+  * `batch_size` (Kích thước lô): biến rời rạc thuộc tập $\{16, 32, 64\}$.
+  * `optimizer` (Thuật toán tối ưu): biến phân loại thuộc tập $\{\text{Adam}, \text{RMSprop}, \text{SGD}\}$ (với SGD cố định `momentum = 0.9`).
+  * `dropout_rate` (Tỷ lệ điều chuẩn Dropout): biến thực liên tục thuộc đoạn $[0.1, 0.7]$, lấy mẫu theo phân phối uniform.
+* **Hàm mục tiêu ($f(x)$):** Cực đại hóa độ chính xác trên tập kiểm định (*Validation Accuracy*) sau 10 epochs huấn luyện.
+* **Ràng buộc & Ngân sách thực nghiệm:** Giới hạn 30 lượt thử nghiệm (*trials*) $\times$ 10 epochs/lượt. Tập huấn luyện gốc 50.000 ảnh được chia theo tỷ lệ 80:20 (40.000 ảnh Train / 10.000 ảnh Validation); 10.000 ảnh Test được giữ độc lập hoàn toàn.
+
+---
+
+## 3. Phương pháp và Thiết kế thực nghiệm
+
+* **Bộ dữ liệu:** CIFAR-10 Public Benchmark (Alex Krizhevsky, 2009) gồm 60.000 ảnh màu RGB kích thước $32 \times 32$ thuộc 10 lớp đối tượng, chuẩn hóa pixel về miền $[-1, 1]$.
+* **Cấu hình mốc tham chiếu (Baseline):** `lr = 0.001`, `batch_size = 32`, `optimizer = Adam`, `dropout_rate = 0.5`.
+* **Thuật toán tối ưu hóa:** Tree-structured Parzen Estimator (TPE) thông qua thư viện **Optuna** (`seed = 42` cố định tính tái lập trên Python 3.11 và PyTorch).
+
+---
+
+## 4. Kết quả thực nghiệm & Phân tích
+
+| Cấu hình mô hình | Validation Acc | Test Acc (Độc lập) | Generalization Gap (Test − Val) | Bộ siêu tham số chi tiết |
+| :--- | :---: | :---: | :---: | :--- |
+| **Baseline (Mặc định)** | **68,48%** | **69,26%** | **+0,78%** | `lr=0.001`, `batch=32`, `Adam`, `dropout=0.5` |
+| **Best Trial (#23 — Optuna TPE)** | **70,37%** | **57,38%** | **-12,99%** | `lr=0.002025`, `batch=16`, `SGD`, `dropout=0.2531` |
+| **Mức chênh lệch (TPE − Base)** | **+1,89%** | **-11,88%** | — | Đánh giá qua 30 trials (10 epochs/trial) |
+
+### Phân tích độ nhạy (fANOVA) & Tổng quát hóa
+
+* **Tầm quan trọng siêu tham số (fANOVA):** Tốc độ học (`lr`) chi phối **79% (0,79)** sự biến thiên của độ chính xác, tiếp theo là tỷ lệ dropout (`dropout_rate`) chiếm **21% (0,21)**; hai tham số `optimizer` và `batch_size` có tác động trực tiếp không đáng kể (**< 1%**
